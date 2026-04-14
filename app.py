@@ -1,6 +1,5 @@
 from flask import Flask, jsonify
 import redis
-import time
 import os
 import json
 
@@ -12,7 +11,6 @@ REDIS_PORT = int(os.getenv("REDIS_PORT", 6379))
 REDIS_DB = int(os.getenv("REDIS_DB", 0))
 REDIS_PASSWORD = os.getenv("REDIS_PASSWORD", None)
 
-# połączenie do Redis
 r = redis.Redis(
     host=REDIS_HOST,
     port=REDIS_PORT,
@@ -21,29 +19,46 @@ r = redis.Redis(
     decode_responses=True
 )
 
-def get_expensive_data():
-    time.sleep(3)
-    return {"data": "To są dane z backendu", "timestamp": time.time()}
+# 🔹 endpoint zapisujący dane
+@app.route("/seed")
+def seed():
+    for i in range(10):
+        key = f"user:{i}"
+        value = {
+            "id": i,
+            "name": f"user_{i}"
+        }
+        r.set(key, json.dumps(value))  # brak TTL
 
-@app.route("/data")
-def get_data():
-    cache_key = "my_data"
+    return jsonify({"status": "saved 10 records"})
 
-    cached = r.get(cache_key)
-    if cached:
-        return jsonify({
-            "source": "cache",
-            "value": json.loads(cached)
-        })
 
-    data = get_expensive_data()
+# 🔹 endpoint zwracający wszystkie dane
+@app.route("/users")
+def get_users():
+    result = []
 
-    r.setex(cache_key, 10, json.dumps(data))
+    for i in range(10):
+        key = f"user:{i}"
+        data = r.get(key)
 
-    return jsonify({
-        "source": "backend",
-        "value": data
-    })
+        if data:
+            result.append(json.loads(data))
+
+    return jsonify(result)
+
+
+# 🔹 endpoint dla jednego usera
+@app.route("/users/<int:user_id>")
+def get_user(user_id):
+    key = f"user:{user_id}"
+    data = r.get(key)
+
+    if not data:
+        return jsonify({"error": "not found"}), 404
+
+    return jsonify(json.loads(data))
+
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
