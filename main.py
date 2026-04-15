@@ -47,7 +47,6 @@ def get_users():
 
     return result
 
-
 # 🔹 pobranie jednego usera
 @app.get("/users/{user_id}")
 def get_user(user_id: int):
