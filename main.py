@@ -16,7 +16,9 @@ r = redis.Redis(
     port=REDIS_PORT,
     db=REDIS_DB,
     password=REDIS_PASSWORD,
-    decode_responses=True
+    decode_responses=True,
+    socket_connect_timeout=15,
+    socket_timeout=15
 )
 
 # 🔹 health check
@@ -42,15 +44,9 @@ def seed():
 # 🔹 pobranie wszystkich userów
 @app.get("/users")
 def get_users():
-    result = []
-
     try:
-        for i in range(10):
-            key = f"user:{i}"
-            data = r.get(key)
-
-            if data:
-                result.append(json.loads(data))
+        keys = r.keys("user:*")
+        result = [json.loads(r.get(key)) for key in sorted(keys, key=lambda k: int(k.split(":")[1]))]
     except redis.ConnectionError:
         raise HTTPException(status_code=503, detail="brak połączenia z Redis")
 
