@@ -19,6 +19,12 @@ r = redis.Redis(
     decode_responses=True
 )
 
+# 🔹 health check
+@app.get("/health")
+def health():
+    return {"status": "ok"}
+
+
 # 🔹 seed danych
 @app.get("/seed")
 def seed():
