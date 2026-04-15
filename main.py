@@ -1,5 +1,6 @@
 from fastapi import FastAPI, HTTPException
 import redis
+import psycopg2
 import os
 import json
 
@@ -21,6 +22,21 @@ r = redis.Redis(
     socket_timeout=15
 )
 
+PG_HOST = os.getenv("PG_HOST", "localhost")
+PG_PORT = int(os.getenv("PG_PORT", 5432))
+PG_DB = os.getenv("PG_DB", "postgres")
+PG_USER = os.getenv("PG_USER", "postgres")
+PG_PASSWORD = os.getenv("PG_PASSWORD", "")
+
+def get_pg():
+    return psycopg2.connect(
+        host=PG_HOST,
+        port=PG_PORT,
+        dbname=PG_DB,
+        user=PG_USER,
+        password=PG_PASSWORD
+    )
+
 # 🔹 health check
 @app.get("/health")
 def health():
@@ -37,6 +53,26 @@ def seed():
             r.set(f"user:{i}", json.dumps({"id": i, "name": f"user_{i}"}))
     except (redis.ConnectionError, redis.TimeoutError):
         raise HTTPException(status_code=503, detail="brak połączenia z Redis")
+
+    try:
+        conn = get_pg()
+        cur = conn.cursor()
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS users (
+                id INTEGER PRIMARY KEY,
+                name TEXT NOT NULL
+            )
+        """)
+        for i in range(next_id, next_id + 10):
+            cur.execute(
+                "INSERT INTO users (id, name) VALUES (%s, %s) ON CONFLICT (id) DO NOTHING",
+                (i, f"user_{i}")
+            )
+        conn.commit()
+        cur.close()
+        conn.close()
+    except psycopg2.OperationalError as e:
+        raise HTTPException(status_code=503, detail=f"brak połączenia z PostgreSQL: {e}")
 
     return {"status": f"saved 10 records (id {next_id}–{next_id + 9})"}
 
