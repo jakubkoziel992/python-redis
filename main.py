@@ -29,17 +29,14 @@ def health():
 @app.get("/seed")
 def seed():
     try:
-        for i in range(10):
-            key = f"user:{i}"
-            value = {
-                "id": i,
-                "name": f"user_{i}"
-            }
-            r.set(key, json.dumps(value))
+        existing = r.keys("user:*")
+        next_id = max((int(k.split(":")[1]) for k in existing), default=-1) + 1
+        for i in range(next_id, next_id + 10):
+            r.set(f"user:{i}", json.dumps({"id": i, "name": f"user_{i}"}))
     except redis.ConnectionError:
         raise HTTPException(status_code=503, detail="brak połączenia z Redis")
 
-    return {"status": "saved 10 records"}
+    return {"status": f"saved 10 records (id {next_id}–{next_id + 9})"}
 
 
 # 🔹 pobranie wszystkich userów
