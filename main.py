@@ -57,6 +57,14 @@ def seed():
     try:
         conn = get_pg()
         cur = conn.cursor()
+        cur.execute("SELECT current_user, current_database()")
+        pg_user, pg_db = cur.fetchone()
+        print(f"[PG] połączono jako: {pg_user}, baza: {pg_db}")
+
+        cur.execute("SHOW search_path")
+        search_path = cur.fetchone()[0]
+        print(f"[PG] search_path: {search_path}")
+
         cur.execute("""
             CREATE TABLE IF NOT EXISTS users (
                 id INTEGER PRIMARY KEY,
