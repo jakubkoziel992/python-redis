@@ -35,7 +35,7 @@ def seed():
         next_id = max((int(k.split(":")[1]) for k in existing), default=-1) + 1
         for i in range(next_id, next_id + 10):
             r.set(f"user:{i}", json.dumps({"id": i, "name": f"user_{i}"}))
-    except redis.ConnectionError:
+    except (redis.ConnectionError, redis.TimeoutError):
         raise HTTPException(status_code=503, detail="brak połączenia z Redis")
 
     return {"status": f"saved 10 records (id {next_id}–{next_id + 9})"}
@@ -47,7 +47,7 @@ def get_users():
     try:
         keys = r.keys("user:*")
         result = [json.loads(r.get(key)) for key in sorted(keys, key=lambda k: int(k.split(":")[1]))]
-    except redis.ConnectionError:
+    except (redis.ConnectionError, redis.TimeoutError):
         raise HTTPException(status_code=503, detail="brak połączenia z Redis")
 
     return result
