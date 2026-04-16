@@ -37,6 +37,13 @@ def get_pg():
         password=PG_PASSWORD
     )
 
+@app.get("/")
+def index():
+    return {
+        "app": "python-redis",
+        "endpoints": ["/health", "/seed", "/users", "/users/{user_id}"]
+    }
+
 # 🔹 health check
 @app.get("/health")
 def health():
